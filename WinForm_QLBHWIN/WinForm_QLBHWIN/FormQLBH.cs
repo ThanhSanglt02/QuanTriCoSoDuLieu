@@ -441,6 +441,7 @@ namespace WinForm_QLBHWIN
                 radioButton1.Checked = false;
                 radioButton2.Checked = false;
                 radioButton3.Checked = false;
+                LoadData();
             }
             catch (Exception ex)
             {
@@ -515,18 +516,32 @@ namespace WinForm_QLBHWIN
 
         private void bt_themct_Click(object sender, EventArgs e)
         {
+            int ret = 0;
             // Lấy dữ liệu từ giao diện
             string maHDB = tb_maHDB.Text.Trim();
             string maHangVin = tb_mh.Text.Trim();
             string maNV = tb_maNV.Text.Trim();
-            string maKH =tb_maKH.Text.Trim();
-            string ngayBan = tb_hienthitg.Text.Trim();
+            string maKH = tb_maKH.Text.Trim();
+            string pttt = "";
+            DateTime ngayBan = Convert.ToDateTime(tb_hienthitg.Text.Trim());
             int soLuongBan;
 
             if (!int.TryParse(tx_sl.Text.Trim(), out soLuongBan) || soLuongBan <= 0)
             {
                 MessageBox.Show("Số lượng bán phải là số nguyên dương.");
                 return;
+            }
+            if (radioButton1.Checked == true)
+            {
+                pttt = "Tiền mặt";
+            }
+            else if (radioButton2.Checked == true)
+            {
+                pttt = "QR";
+            }
+            else if (radioButton3.Checked == true)
+            {
+                pttt ="ATM";
             }
 
             using (SqlConnection con = new SqlConnection(sCon))
@@ -538,35 +553,80 @@ namespace WinForm_QLBHWIN
                     // Gọi stored procedure kiểm tra và thêm vào bảng BÁN_CHI_TIẾT
                     using (SqlCommand cmd = new SqlCommand("spChkBan", con))
                     {
+                        cmd.CommandType = CommandType.StoredProcedure;
 
                         // Thêm tham số đầu vào
                         cmd.Parameters.Add(new SqlParameter("@ngayban", ngayBan));
-                        cmd.Parameters.Add(new SqlParameter("@PTTT", ngayBan));
-                        cmd.Parameters.Add(new SqlParameter("@ngayban", ngayBan));
-                        cmd.Parameters.Add(new SqlParameter("@ngayban", ngayBan));
-                        cmd.Parameters.Add(new SqlParameter("@ngayban", ngayBan));
+                        cmd.Parameters.Add(new SqlParameter("@PTTT", pttt));
+                        cmd.Parameters.Add(new SqlParameter("@manv", maNV));
+                        cmd.Parameters.Add(new SqlParameter("@maKH", maKH));
 
-                        cmd.Parameters.AddWithValue("@mahdb", maHDB);
-                        cmd.Parameters.AddWithValue("@mahangvin", maHangVin);
-                        cmd.Parameters.AddWithValue("@sl_ban", soLuongBan);
-
-                        int rows = cmd.ExecuteNonQuery();
-                        if (rows > 0)
+                        SqlParameter paramOut = new SqlParameter("@kq", SqlDbType.Int)
                         {
-                            MessageBox.Show("Thêm thành công!");
+                            Direction = ParameterDirection.Output
+                        };
+                        cmd.Parameters.Add(paramOut);
 
+                        //thuc thi
+                        cmd.ExecuteNonQuery();
+
+                        int kq = Convert.ToInt32(paramOut.Value);
+                        if (kq == 1)
+                        {
+                            ret = 1;
                             // Cập nhật lại tổng tiền sau khi thêm vào
                             UpdateTotal(maHDB);
                         }
                         else
                         {
-                            MessageBox.Show("Thêm thất bại. Kiểm tra lại dữ liệu nhập.");
+                            ret = 0;
+                        }
+                        
+                    }
+
+                    using (SqlCommand cmd = new SqlCommand("spChekBanChiTiet", con))
+                    {
+                        cmd.CommandType = CommandType.StoredProcedure;
+
+                        // Thêm tham số đầu vào
+                        cmd.Parameters.Add(new SqlParameter("@mahdb", maHDB));
+                        cmd.Parameters.Add(new SqlParameter("@mahangvin", maHangVin));
+                        cmd.Parameters.Add(new SqlParameter("@sl_ban", soLuongBan));
+
+                        SqlParameter paramOut = new SqlParameter("@kq", SqlDbType.Int)
+                        {
+                            Direction = ParameterDirection.Output
+                        };
+                        cmd.Parameters.Add(paramOut);
+
+                        //thuc thi
+                        cmd.ExecuteNonQuery();
+
+                        int kq = Convert.ToInt32(paramOut.Value);
+                        if (kq == 1)
+                        {
+                            ret = 1;
+                            // Cập nhật lại tổng tiền sau khi thêm vào
+                            UpdateTotal(maHDB);
+                            LoadData();
+                        }
+                        else
+                        {
+                            ret = 0;
                         }
                     }
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show("Xảy ra lỗi: " + ex.Message);
+                }
+                if (ret == 1)
+                {
+                    MessageBox.Show("Them thanh cong");
+                }
+                else
+                {
+                    MessageBox.Show("Them khong thanh cong");
                 }
             }
         }

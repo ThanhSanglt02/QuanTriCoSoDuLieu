@@ -28,7 +28,7 @@ namespace WinForm_QLBHWIN
         }
         private void FormMain_Load(object sender, EventArgs e)
         {
-            FormQLBH bh = new FormQLBH();
+            gdDatHang bh = new gdDatHang();
             bh.MdiParent = this;
 
             bh.StartPosition = FormStartPosition.Manual; // Bắt buộc phải đặt Manual để dùng Location

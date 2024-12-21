@@ -197,5 +197,17 @@ namespace WinForm_QLBHWIN
             ncc.Show();
             this.Close();
         }
+
+        private void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            tx_mdvvc.Text = dataGridView1.Rows[e.RowIndex].Cells["MaDVVC"].Value.ToString();
+            tx_tdvvc.Text = dataGridView1.Rows[e.RowIndex].Cells["TenNVC"].Value.ToString();
+            tb_ngh.Text = dataGridView1.Rows[e.RowIndex].Cells["NgayGiaoHang"].Value.ToString();
+            tx_sdt.Text = dataGridView1.Rows[e.RowIndex].Cells["decryptedSDT_NVC"].Value.ToString();
+
+
+            //enable input maKh
+            tx_mdvvc.Enabled = false;
+        }
     }
 }

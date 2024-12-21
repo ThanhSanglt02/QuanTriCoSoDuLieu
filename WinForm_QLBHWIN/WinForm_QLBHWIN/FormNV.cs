@@ -148,5 +148,16 @@ namespace WinForm_QLBHWIN
                 }
             }
         }
+
+        private void dataGridView1_CellClick(object sender, DataGridViewCellEventArgs e)
+        {
+            tx_mnv.Text = dataGridView1.Rows[e.RowIndex].Cells["MaNV"].Value.ToString();
+            tx_nv.Text = dataGridView1.Rows[e.RowIndex].Cells["TenNV"].Value.ToString();
+            tx_sdt.Text = dataGridView1.Rows[e.RowIndex].Cells["decryptedSDT_NV"].Value.ToString();
+
+
+            //enable input maKh
+            tx_mnv.Enabled = false;
+        }
     }
 }

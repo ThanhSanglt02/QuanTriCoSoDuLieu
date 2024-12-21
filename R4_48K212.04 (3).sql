@@ -1847,35 +1847,36 @@ select * from BAN join BAN_CHITIET on ban.MaHDB = BAN_CHITIET.MaHDB
 
 
 -- cap nhat so luong ban
-create or ALTER proc sp_capnhatslsp(@mahdb char(15), @mahangvin char(8), @soluongbanmoi int, @ret bit out)
-As
-begin
-	declare @soluongbancu int
-	If @mahdb not in (select MaHDB from BAN)
-		BEGIN 
-			print N'Không tồn tại mã hoá đơn'
-			Set @ret=0
-			Return
-		End
-	if @mahangvin not in (select MaHangVin from BAN_CHITIET where MaHDB=@mahdb And MaHangVin=@mahangvin)
-		BEGIN 
-			print N'Không tồn tại sản phẩm trong hoá đơn'
-			Set @ret=0
-			Return
-		End
-	select @soluongbancu=SL_Ban from BAN_CHITIET where MaHDB=@mahdb And MaHangVin=@mahangvin
-	Update SANPHAM
-	Set Sl_SP=Sl_SP+@soluongbancu-@soluongbanmoiS
-	where MaHangVin=@mahangvin
-	if @@ROWCOUNT=0
-		begin 
-			Set @ret=0
-		End
-	else 
-		begin
-			Set @ret=1
-		End
-End
+--go
+--create or ALTER proc sp_capnhatslsp(@mahdb char(15), @mahangvin char(8), @soluongbanmoi int, @ret bit out)
+--As
+--begin
+--	declare @soluongbancu int
+--	If @mahdb not in (select MaHDB from BAN)
+--		BEGIN 
+--			print N'Không tồn tại mã hoá đơn'
+--			Set @ret=0
+--			Return
+--		End
+--	if @mahangvin not in (select MaHangVin from BAN_CHITIET where MaHDB=@mahdb And MaHangVin=@mahangvin)
+--		BEGIN 
+--			print N'Không tồn tại sản phẩm trong hoá đơn'
+--			Set @ret=0
+--			Return
+--		End
+--	select @soluongbancu=SL_Ban from BAN_CHITIET where MaHDB=@mahdb And MaHangVin=@mahangvin
+--	Update SANPHAM
+--	Set Sl_SP=Sl_SP+@soluongbancu-@soluongbanmoi
+--	where MaHangVin=@mahangvin
+--	if @@ROWCOUNT=0
+--		begin 
+--			Set @ret=0
+--		End
+--	else 
+--		begin
+--			Set @ret=1
+--		End
+--End
 select * from sanpham
 where Mahangvin = 'MHV00078'  
 -------------------------END THỦ TỤC----------------------------------------------
@@ -1889,9 +1890,9 @@ on ban_chitiet
 for UPDATE
 as
 begin
-	declare @mahangvin char(15), @slsp int, @slban int
+	declare @mahangvin char(15), @slsp int, @slban int, @mahd varchar(20)
 	-- SU KIEN INSERT
-	select @slban = sl_ban,@mahangvin = mahangvin from inserted
+	select @slban = sl_ban,@mahangvin = mahangvin  from inserted
 	select @slsp = sl_sp from SANPHAM where Mahangvin = @mahangvin
 
 	if @slban > @slsp
@@ -1899,11 +1900,26 @@ begin
 		print N'Số lượng bán lớn hơn số lượng sản phẩm đang có'
 		rollback
 	end
+	
+	Update SanPham 
+	set Sl_SP = @slsp - @slban
+	where mahangvin = @mahangvin
+	
+	if @@ROWCOUNT < 0
+	begin
+		print 'Cap nhat khong thanh cong'
+		rollback
+	end
 end
 
+
 UPDATE BAN_CHITIET
-SET SL_Ban = 1000
-WHERE MaHangVin = '00000005' --> OK , TH FAILED
+SET SL_Ban = 100
+WHERE MaHangVin = 'MHV00001' and MaHDB = 'HDB000000000007'  --> sl_sp = 430
+
+select * from BAN_CHITIET
+WHERE MaHangVin = 'MHV00001'
+
 UPDATE BAN_CHITIET
 SET SL_Ban = 930
 WHERE MaHangVin = 'MHV00001' --> OK, TH PASS -> SL_SP = 958
@@ -1912,13 +1928,56 @@ WHERE MaHangVin = 'MHV00001' --> OK, TH PASS -> SL_SP = 958
 select * from SANPHAM join BAN_CHITIET ON SANPHAM.MaHangVin = BAN_CHITIET.MaHangVin
 WHERE SANPHAM.MaHangVin = 'MHV00001'
 SELECT * FROM BAN_CHITIET
+
+
+--trigger: tự động trừ sôs lượng sản phẩm 
+go
+create or alter trigger t_themHDB
+on ban
+for insert
+as
+begin
+	
+	declare @mahangvin char(15), @slsp int, @slban int, @mahd varchar(20)
+	-- SU KIEN INSERT
+	select @slban = sl_ban,@mahangvin = mahangvin  from inserted
+	select @slsp = sl_sp from SANPHAM where Mahangvin = @mahangvin
+
+	UPDATE SANPHAM
+	SET Sl_SP = @slsp - @slban
+	WHERE MaHangVin = @mahangvin
+
+	IF @@ROWCOUNT = 0
+	BEGIN
+		PRINT N'Cập nhật thất bại'
+		ROLLBACK
+	END
+	ELSE
+	BEGIN
+		PRINT N'Cập nhật thành công'
+	END
+end
+
+insert into BAN_CHITIET
+values('HDB000000001000', 'MHV00302',10);
+
+select * from SANPHAM
+where mahangvin = 'MHV00302'  --413  --> 403
+select * from BAN_CHITIET
+
+select * from ban
+
+
 ----------------------------------END TRIGGER-------------------------------------
 
+
+
 --proc them san pham
+go
 create or ALTER PROCEDURE proc_themsanphamhdb	@mahoadon CHAR(8),
 												@masanpham CHAR(8),
 												@soluongban INT,
-											@ret bit out
+												@ret bit out
 AS
 BEGIN
 	UPDATE SANPHAM
@@ -1937,6 +1996,8 @@ BEGIN
 		Set @ret=1
 	END
 END
+
+select * from SANPHAM
 
 /*------------------------------------------------------------------END BÁN CHI TIẾT-----------------------------------------------------------------------------*/
 
